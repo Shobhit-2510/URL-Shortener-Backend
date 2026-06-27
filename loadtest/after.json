@@ -1,0 +1,17 @@
+{
+  "label": "after_cache",
+  "concurrency": 50,
+  "duration_s": 20.08,
+  "requests": 15025,
+  "throughput_rps": 748.2,
+  "latency_ms": {
+    "mean": 66.69,
+    "p50": 44.69,
+    "p95": 202.34,
+    "p99": 336.3,
+    "max": 762.54
+  },
+  "status_counts": {
+    "302": 15025
+  }
+}

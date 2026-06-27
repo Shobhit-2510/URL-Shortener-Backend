@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    # Real Redis as a service so the rate limiter's Lua and the Streams worker
+    # are exercised against an actual server, not just fakeredis. The test suite
+    # itself uses SQLite + fakeredis (hermetic), but we also smoke-test redis.
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Run tests
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///:memory:
+          USE_FAKE_REDIS: "true"
+        run: pytest -q
+
+      - name: Redis integration smoke test
+        env:
+          REDIS_URL: redis://localhost:6379/0
+          USE_FAKE_REDIS: "false"
+        run: |
+          python - <<'PY'
+          import asyncio, time
+          from app.redis_client import get_redis
+          from app import ratelimit
+
+          async def main():
+              r = get_redis()
+              assert await r.ping()
+              # Token bucket works against real Redis Lua:
+              res = await ratelimit.check(r, "ci", now=time.time())
+              assert res.allowed
+              print("redis integration OK")
+
+          asyncio.run(main())
+          PY

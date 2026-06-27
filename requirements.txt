@@ -1,0 +1,25 @@
+# --- Web / API ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.0
+
+# --- Persistence ---
+SQLAlchemy[asyncio]==2.0.36
+asyncpg==0.30.0          # PostgreSQL async driver (production)
+aiosqlite==0.20.0        # SQLite async driver (local/test fallback)
+
+# --- Cache / queue / rate limiting ---
+redis==5.2.1             # redis.asyncio client; also used for Streams
+
+# --- Observability ---
+structlog==24.4.0
+prometheus-client==0.21.1
+
+# --- Test / load / dev ---
+pytest==8.3.4
+pytest-asyncio==0.25.0
+httpx==0.28.1
+fakeredis==2.26.2        # in-process Redis for tests + local benchmark
+locust==2.32.5
+ruff==0.8.4
