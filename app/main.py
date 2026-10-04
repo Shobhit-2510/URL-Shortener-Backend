@@ -11,7 +11,7 @@ from app.database import dispose_engine, init_models
 from app.logging_config import configure_logging
 from app.middleware import RateLimitMiddleware, RequestContextMiddleware
 from app.redis_client import close_redis
-from app.routes import frontend, health, redirect, shorten
+from app.routes import health, redirect, shorten
 
 log = structlog.get_logger(__name__)
 
@@ -46,7 +46,6 @@ def create_app() -> FastAPI:
     # never shadows /api/*, /health, /metrics.
     app.include_router(health.router)
     app.include_router(shorten.router)
-    app.include_router(frontend.router)
     app.include_router(redirect.router)
     return app
 

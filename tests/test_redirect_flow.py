@@ -112,10 +112,3 @@ async def test_health_and_metrics(client) -> None:
     m = await client.get("/metrics")
     assert m.status_code == 200
     assert "http_requests_total" in m.text
-
-
-async def test_root_serves_frontend(client) -> None:
-    r = await client.get("/")
-    assert r.status_code == 200
-    assert "text/html" in r.headers.get("content-type", "")
-    assert "TrimURL" in r.text
