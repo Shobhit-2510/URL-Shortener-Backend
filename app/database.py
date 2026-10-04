@@ -36,6 +36,9 @@ def _create_engine() -> AsyncEngine:
                 poolclass=StaticPool,
             )
         return create_async_engine(url, future=True, pool_pre_ping=True)
+    if url.startswith("postgresql+asyncpg"):
+        url = url.replace("sslmode=require", "ssl=require")
+
     return create_async_engine(
         url,
         future=True,
