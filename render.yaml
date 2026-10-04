@@ -15,24 +15,3 @@ services:
       - key: USE_FAKE_REDIS
         value: "false"
 
-  - type: worker
-    name: url-shortener-worker
-    env: docker
-    plan: free
-    region: frankfurt
-    dockerCommand: "python -m app.worker"
-    envVars:
-      - key: ENVIRONMENT
-        value: production
-      - key: DATABASE_URL
-        fromService:
-          type: web
-          name: url-shortener-api
-          envVarKey: DATABASE_URL
-      - key: REDIS_URL
-        fromService:
-          type: web
-          name: url-shortener-api
-          envVarKey: REDIS_URL
-      - key: USE_FAKE_REDIS
-        value: "false"
