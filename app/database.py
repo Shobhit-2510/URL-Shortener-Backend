@@ -21,9 +21,42 @@ _engine: AsyncEngine | None = None
 _sessionmaker: async_sessionmaker[AsyncSession] | None = None
 
 
+def _sanitize_db_url(url: str) -> str:
+    """Normalize database URL for async drivers and strip libpq-only parameters."""
+    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+    if url.startswith("postgres://"):
+        url = "postgresql+asyncpg://" + url[len("postgres://"):]
+    elif url.startswith("postgresql://") and not url.startswith("postgresql+"):
+        url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+
+    if url.startswith("postgresql+asyncpg"):
+        parts = urlsplit(url)
+        query_params = parse_qsl(parts.query)
+        cleaned_params: list[tuple[str, str]] = []
+        has_ssl = False
+        for k, v in query_params:
+            if k == "sslmode":
+                cleaned_params.append(("ssl", "require" if v == "require" else v))
+                has_ssl = True
+            elif k == "ssl":
+                cleaned_params.append(("ssl", v))
+                has_ssl = True
+            elif k in ("channel_binding", "target_session_attrs", "gssencmode"):
+                # libpq-specific parameters unsupported by asyncpg
+                continue
+            else:
+                cleaned_params.append((k, v))
+        if not has_ssl and "neon.tech" in parts.netloc:
+            cleaned_params.append(("ssl", "require"))
+        new_query = urlencode(cleaned_params)
+        url = urlunsplit((parts.scheme, parts.netloc, parts.path, new_query, parts.fragment))
+    return url
+
+
 def _create_engine() -> AsyncEngine:
     settings = get_settings()
-    url = settings.database_url
+    url = _sanitize_db_url(settings.database_url)
     if url.startswith("sqlite"):
         # In-memory SQLite gives each new connection its own private database, so
         # a StaticPool (one shared connection) is required for tables to persist
@@ -36,9 +69,6 @@ def _create_engine() -> AsyncEngine:
                 poolclass=StaticPool,
             )
         return create_async_engine(url, future=True, pool_pre_ping=True)
-    if url.startswith("postgresql+asyncpg"):
-        url = url.replace("sslmode=require", "ssl=require")
-
     return create_async_engine(
         url,
         future=True,
