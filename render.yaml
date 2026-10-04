@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: url-shortener-api
+    env: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health/live
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        sync: false # Set via Render Dashboard -> Secrets (Neon Postgres URL)
+      - key: REDIS_URL
+        sync: false # Set via Render Dashboard -> Secrets (Upstash Redis URL)
+      - key: USE_FAKE_REDIS
+        value: "false"
+
+  - type: worker
+    name: url-shortener-worker
+    env: docker
+    plan: free
+    region: frankfurt
+    dockerCommand: "python -m app.worker"
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: url-shortener-api
+          envVarKey: DATABASE_URL
+      - key: REDIS_URL
+        fromService:
+          type: web
+          name: url-shortener-api
+          envVarKey: REDIS_URL
+      - key: USE_FAKE_REDIS
+        value: "false"

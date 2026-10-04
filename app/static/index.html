@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue.js for simplicity, or just vanilla JS -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+    <div class="max-w-xl w-full bg-white rounded-2xl shadow-xl overflow-hidden p-8">
+        <h1 class="text-3xl font-extrabold text-gray-900 mb-2 text-center">TrimURL</h1>
+        <p class="text-gray-500 text-center mb-8">Shorten your long links instantly.</p>
+        
+        <form id="shortenForm" class="space-y-4">
+            <div>
+                <label for="url" class="block text-sm font-medium text-gray-700">Long URL</label>
+                <input type="url" id="url" name="url" required placeholder="https://example.com/very/long/path" 
+                       class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+            <div>
+                <label for="alias" class="block text-sm font-medium text-gray-700">Custom Alias (Optional)</label>
+                <div class="mt-1 flex rounded-md shadow-sm">
+                    <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
+                        trim.url/
+                    </span>
+                    <input type="text" id="alias" name="alias" placeholder="my-custom-link" 
+                           class="flex-1 min-w-0 block w-full px-4 py-3 border border-gray-300 rounded-none rounded-r-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+            </div>
+            <button type="submit" id="submitBtn" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                Shorten URL
+            </button>
+        </form>
+
+        <div id="errorBox" class="hidden mt-4 p-4 rounded-md bg-red-50 border border-red-200">
+            <p id="errorMsg" class="text-sm text-red-700"></p>
+        </div>
+
+        <div id="resultBox" class="hidden mt-8 p-6 rounded-lg bg-indigo-50 border border-indigo-100 text-center">
+            <p class="text-sm font-medium text-indigo-900 mb-2">Your shortened URL is ready!</p>
+            <div class="flex items-center justify-center space-x-2">
+                <a id="shortUrl" href="#" target="_blank" class="text-lg font-bold text-indigo-600 hover:underline break-all"></a>
+                <button id="copyBtn" class="p-2 text-indigo-600 hover:text-indigo-800 focus:outline-none" title="Copy to clipboard">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    </svg>
+                </button>
+            </div>
+            <p id="copyToast" class="hidden text-xs text-green-600 mt-2 font-medium">Copied to clipboard!</p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('shortenForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const resultBox = document.getElementById('resultBox');
+        const shortUrlEl = document.getElementById('shortUrl');
+        const errorBox = document.getElementById('errorBox');
+        const errorMsg = document.getElementById('errorMsg');
+        const copyBtn = document.getElementById('copyBtn');
+        const copyToast = document.getElementById('copyToast');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Reset state
+            resultBox.classList.add('hidden');
+            errorBox.classList.add('hidden');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Shortening...';
+
+            const url = document.getElementById('url').value;
+            const custom_alias = document.getElementById('alias').value;
+
+            const payload = { url };
+            if (custom_alias) payload.custom_alias = custom_alias;
+
+            try {
+                const response = await fetch('/api/shorten', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to shorten URL');
+                }
+
+                // Use the short_url directly from the API response
+                const shortLink = data.short_url;
+                shortUrlEl.href = shortLink;
+                shortUrlEl.textContent = shortLink;
+                resultBox.classList.remove('hidden');
+
+            } catch (error) {
+                errorMsg.textContent = error.message;
+                errorBox.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Shorten URL';
+            }
+        });
+
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(shortUrlEl.href).then(() => {
+                copyToast.classList.remove('hidden');
+                setTimeout(() => copyToast.classList.add('hidden'), 2000);
+            });
+        });
+    </script>
+</body>
+</html>
